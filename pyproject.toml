@@ -15,6 +15,21 @@ loguru = "^0.7.2"
 pytest = "^8.3.3"
 pytest-cov = "^5.0.0"
 
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
 
 [build-system]
 requires = ["poetry-core"]
