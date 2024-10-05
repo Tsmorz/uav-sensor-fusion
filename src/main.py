@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+from definitions import FIG_SIZE
 
 def ground(x):
     y = 0.5 * np.cos(x) + 4 * np.cos(0.2 * x) + 0.51 * x - 0.005 * x**2
@@ -126,7 +126,7 @@ def prediction(state, u):
 
 def main():
     # create environment
-    plt.figure(2, figsize=(10, 5))
+    plt.figure(2, figsize=FIG_SIZE)
     x = np.linspace(0, 100, 40)
     y = np.linspace(0, 50, 40)
     [X, Y] = np.meshgrid(x, y)
@@ -180,8 +180,9 @@ def main():
         # plot measurements
         h = pressure2height(p=m[0], var=0)
         plt.plot([0, np.max(x)], [h, h], "--", color=[0, 1, 1])
-        plt.plot([state[0], state[0]], [state[1], state[1] - m[1]], "--",
-                 color=[0, 1, 0.5])
+        plt.plot(
+            [state[0], state[0]], [state[1], state[1] - m[1]], "--", color=[0, 1, 0.5]
+        )
         plt.plot(state[0], state[1], "k*")
 
         # gradient descent
