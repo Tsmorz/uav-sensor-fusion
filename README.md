@@ -1,4 +1,6 @@
-# uav-sensor-fusion
+# UAV Sensor Fusion Research
+
+### Summary
 <img src="docs/drone-simulation.png" width="50%" height="50%">
 
 This is the directory to use the planar drone simulator used to perform state estimation in GPS denied environments but with a known map. The model assumes:
@@ -10,4 +12,17 @@ This is the directory to use the planar drone simulator used to perform state es
 
 With these three metrics, the drone is able to localize itself by solving a nonlinear least squares problem with the [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). The blue/red contour lines represent the gradient that is decended inorder to minimize the cost function. The solution represents the most likely location given different variances on the process and measurement noise.
 
-The file ```nonlinear.ipynb``` can be run in VS Code as a Python Notebook or through https://jupyter.org. The necessary libraries are only numpy, scipy, and matplotlib.
+### Setup
+`make init`
+
+### Running
+`poetry run python src/main.py`
+
+### Adding to the repo
+When wanting to make new changes, please create a new branch first:
+`git checkout -b "new_branch_name`
+
+While making changes in your new branch, keep track of changes with:
+`git add <file_that_change>`
+`git commit -m "a useful message`
+`git push`
