@@ -19,10 +19,13 @@ With these three metrics, the drone is able to localize itself by solving a nonl
 `poetry run python src/main.py`
 
 ### Adding to the repo
-When wanting to make new changes, please create a new branch first:
+When wanting to make new changes, please create a new branch first:\
 `git checkout -b "new_branch_name`
 
-While making changes in your new branch, keep track of changes with:
-`git add <file_that_change>`
-`git commit -m "a useful message`
+While making changes in your new branch, keep track of changes with:\
+`git add <file_that_change>`\
+`git commit -m "a useful message`\
 `git push`
+
+With new functionality, please create new unit and integration tests to make development easier in the future. Your tests should be added to the `tests` directory.
+Tests should be run with: `make test`
