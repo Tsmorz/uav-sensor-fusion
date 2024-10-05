@@ -5,7 +5,7 @@ init:
 	poetry env info
 	@echo "Created virtual environment"
 test:
-	poetry run pytest --cov=src/ tests/ --no-cov-on-fail
+	poetry run pytest --cov=tests/ --no-cov-on-fail
 
 format:
 	ruff format
