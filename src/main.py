@@ -1,51 +1,31 @@
-import numpy as np
+"""public doc string."""
+
 import matplotlib.pyplot as plt
-from definitions import FIG_SIZE
+import numpy as np
+from ground_model_utils import ground
+from loguru import logger
+from pressure_utils import PressureSensor
 
-def ground(x):
-    y = 0.5 * np.cos(x) + 4 * np.cos(0.2 * x) + 0.51 * x - 0.005 * x**2
-    # y = 0.15*np.cos(x) + 1
-    # y = 0.15*x
-    return y
-
-
-def height2pressure(h, var=0):
-    h0 = 0
-    p0 = 1013.25
-    g = 9.80665
-    M = 0.0289644
-    R = 8.31432
-    T = 273
-
-    noise = np.random.normal(0, scale=var)
-    p = p0 * np.exp(-g * M * (h - h0) / R / T)
-
-    return p + noise
+from definitions import EPSILON, FIG_SIZE
 
 
-def pressure2height(p, var=0):
-    h0 = 0
-    p0 = 1013.25
-    g = 9.80665
-    M = 0.0289644
-    R = 8.31432
-    T = 273
+def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
+    """Find the state estimate given the state and previous state.
 
-    noise = np.random.normal(0, scale=var)
-    h = h0 - np.log(p / p0) * R * T / g / M
-
-    return h + noise
-
-
-def fx(state, x_old):
+    :param state: current state
+    :param x_old: previous state
+    :return: the state estimate
+    """
+    num_states = 2
     x, y = state
 
     x_old = np.array([[x_old[0]], [x_old[1]]])
-    A = np.eye(2)
-    B = np.eye(2)
+    A = np.eye(num_states)
+    B = np.eye(num_states)
     est_u = np.linalg.inv(B.T @ B) @ B.T @ (np.array([[x], [y]]) - A @ x_old)
 
-    f1 = height2pressure(y)
+    pressure_sensor = PressureSensor()
+    f1 = pressure_sensor.height2pressure(height=y)
     f2 = y - ground(x)
     f3 = est_u[0, 0]
     f4 = est_u[1, 0]
@@ -55,13 +35,18 @@ def fx(state, x_old):
     return f
 
 
-def partialf(state, x_old):
-    x, y = state
-    dx = 0.000001
-    dy = 0.000001
+def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
+    """Find the partial derivatives of the given state.
 
-    dfdx1 = (fx((x + dx, y), x_old) - fx((x, y), x_old)) / dx
-    dfdx2 = (fx((x, y + dy), x_old) - fx((x, y), x_old)) / dy
+    :param state: current state
+    :param x_old: previous state
+    :return: the partial derivatives of the state
+    """
+    x, y = state[0], state[1]
+    dx, dy = EPSILON, EPSILON
+
+    dfdx1 = (fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)) / dx
+    dfdx2 = (fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)) / dy
 
     df = np.hstack((dfdx1, dfdx2))
 
@@ -69,9 +54,16 @@ def partialf(state, x_old):
 
 
 def cost(x, y, measurement, var):
+    """Create a cost function to minimize the state uncertainty.
+
+    :param x: current distance
+    :param y: current height
+    :param measurement: measurement
+    :param var: covariance matrix
+    """
     p, r, x_old, u = measurement
 
-    f = fx((x, y), x_old)
+    f = fx(np.array([x, y]), x_old)
 
     b = np.array([[p], [r], [u[0, 0]], [u[1, 0]]])
 
@@ -82,7 +74,13 @@ def cost(x, y, measurement, var):
     return c
 
 
-def gradDescent(state, measurement, var):
+def grad_descent(state, measurement, var):
+    """Perform gradient descent on the cost function.
+
+    :param state: current state
+    :param measurement: measurement
+    :param var: covariance matrix
+    """
     p, r, x_old, u = measurement
     x, y = state
 
@@ -91,8 +89,8 @@ def gradDescent(state, measurement, var):
     b = np.array([[p], [r], [u[0, 0]], [u[1, 0]]])
 
     states = [(x, y)]
-    for i in range(100):
-        dfdx = partialf((x, y), x_old)
+    for _i in range(100):
+        dfdx = partial_f((x, y), x_old)
 
         f = fx((x, y), x_old)
 
@@ -110,21 +108,35 @@ def gradDescent(state, measurement, var):
     return states
 
 
-def costContour(x, y, m, var):
-    J = np.zeros((len(x), len(y)))
-    for i in range(len(x)):
-        for j in range(len(y)):
+def cost_contour(x: np.ndarray, y: np.ndarray, m: float, var: float):
+    """Visualize the cost function gradient.
+
+    :param x: x coordinate
+    :param y: y coordinate
+    :param m: measurement from sensor
+    :param var: measurement noise
+    """
+    J = np.zeros((np.shape(x)[0], np.shape(y)[0]))
+    for i in range(np.shape(x)[0]):
+        for j in range(np.shape(y)[0]):
             J[j, i] = cost(x[i], y[j], m, var)
     return J
 
 
-def prediction(state, u):
+def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
+    """Predict the next state given the state and control input.
+
+    :param state: current state
+    :param u: control input
+    :return: the next state predicted given the state and control input
+    """
     u = np.reshape(u, (2, 1))
     guess = state + u
     return guess
 
 
 def main():
+    """Run the main function."""
     # create environment
     plt.figure(2, figsize=FIG_SIZE)
     x = np.linspace(0, 100, 40)
@@ -157,7 +169,8 @@ def main():
         state[0, 0] -= np.random.normal(wind, scale=wind / 2)
 
         # measurements
-        p = height2pressure(state[1, 0])
+        pressure_sensor = PressureSensor()
+        p = pressure_sensor.height2pressure(height=state[1, 0])
         r = state[1, 0] - ground(state[0, 0])
         m = (
             p + np.random.normal(0, scale=var[0, 0]),
@@ -170,7 +183,7 @@ def main():
         prev.append((state[0, 0], state[1, 0]))
 
         # store prediction
-        sol = gradDescent((guess[0, 0] - 10, guess[1, 0] + 10), m, var)
+        sol = grad_descent((guess[0, 0] - 10, guess[1, 0] + 10), m, var)
         sx, sy = zip(*sol)
         prev_pred.append((sx[-1], sy[-1]))
 
@@ -178,7 +191,9 @@ def main():
         plt.cla()
 
         # plot measurements
-        h = pressure2height(p=m[0], var=0)
+        pressure_sensor = PressureSensor()
+        h = pressure_sensor.pressure2height(pressure=m[0])
+
         plt.plot([0, np.max(x)], [h, h], "--", color=[0, 1, 1])
         plt.plot(
             [state[0], state[0]], [state[1], state[1] - m[1]], "--", color=[0, 1, 0.5]
@@ -187,7 +202,7 @@ def main():
 
         # gradient descent
         plt.plot(sx[-1], sy[-1], "y*")
-        # plt.plot(sx,sy,'r--')
+        plt.plot(sx, sy, "r--")
 
         # ground truth
         prevx, prevy = zip(*prev)
@@ -207,22 +222,19 @@ def main():
         )
 
         # calculate cost function contour
-        J = costContour(x, y, m, var)
-        # minr,minc = np.where(J == np.amin(J))
-        # plt.plot(x[minc],y[minr],'g*')
+        J = cost_contour(x, y, m, var)
         plt.contourf(X, Y, J, 100, cmap="RdBu_r")
         plt.fill_between(x, 0, g, color="green")
 
         plt.xlabel("x-axis (m)")
         plt.ylabel("y-axis (m)")
         plt.title("Nonlinear Least Squares Drone Localization")
-        # plt.axis('equal')
         plt.xlim([0, 100])
         plt.ylim([0, 40])
 
         plt.show()
-        plt.pause(0.01)
-    [21]
+        plt.close()
+
     diffxLS = np.array(prevx) - np.array(prevx_pred)
     diffx = np.array(prevx) - prevx[0] - np.cumsum(us[0, :])
 
@@ -231,7 +243,7 @@ def main():
 
     all = np.vstack((diffxLS, diffx, diffyLS, diffy))
     lim = np.max(abs(all))
-    plt.figure(3, figsize=(8, 4))
+    plt.figure(3, figsize=FIG_SIZE)
     plt.plot(diffx, "b-")
     plt.plot(diffxLS, "b--")
     plt.plot(diffy, "r-")
@@ -247,14 +259,14 @@ def main():
     plt.ylim([-lim - 1, lim + 1])
     plt.xlabel("time (s)")
     plt.ylabel("position error (m)")
-    plt.grid("on")
+    plt.grid(True)
     plt.show()
 
-    print(np.std(diffx))
-    print(np.std(diffy))
+    logger.info(np.std(diffx))
+    logger.info(np.std(diffy))
 
-    print(np.std(diffxLS))
-    print(np.std(diffyLS))
+    logger.info(np.std(diffxLS))
+    logger.info(np.std(diffyLS))
     return
 
 
