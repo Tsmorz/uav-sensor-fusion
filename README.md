@@ -1,7 +1,7 @@
 # UAV Sensor Fusion Research
 
 ### Summary
-<img src="docs/drone-simulation.png" width="50%" height="50%">
+<img src="docs/drone-simulation.png" width="90%" height="90%">
 
 This is the directory to use the planar drone simulator used to perform state estimation in GPS denied environments but with a known map. The model assumes:
 1. two-dimensional world
