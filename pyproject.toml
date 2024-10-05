@@ -29,6 +29,12 @@ select = [
     "SIM",
     # isort
     "I",
+    # type checking
+    "TCH",
+    # docstrings
+    "D",
+    # unused arguments
+    "ARG",
 ]
 
 [build-system]
