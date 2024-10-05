@@ -1,6 +1,8 @@
 SHELL := /bin/bash
 
 init:
+	pip install pre-commit
+	pre-commit install
 	poetry install
 	poetry env info
 	@echo "Created virtual environment"
