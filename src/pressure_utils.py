@@ -1,5 +1,7 @@
 """public doc string."""
 
+from typing import Any
+
 import numpy as np
 
 from definitions import (
@@ -26,8 +28,9 @@ class PressureSensor:
         self.variance = noise_variance
         pass
 
-    def height2pressure(self, height: float) -> float:
-        """Find the pressure given a height.
+    def height2pressure(self, height: np.ndarray[Any, np.dtype]) -> float:
+        """
+        Find the pressure given a height.
 
         :param self: self
         :param height: the height in meters
@@ -39,7 +42,8 @@ class PressureSensor:
         return p + noise
 
     def pressure2height(self, pressure: float) -> float:
-        """Find the height given a pressure.
+        """
+        Find the height given a pressure.
 
         :param self: self
         :param pressure: the pressure measurement in Pascals
