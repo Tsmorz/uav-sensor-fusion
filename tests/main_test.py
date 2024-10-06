@@ -14,7 +14,7 @@ def sample_function(variable: int) -> int:
 
 
 @pytest.mark.parametrize(
-    ('variable', 'expected_answer'),
+    ("variable", "expected_answer"),
     [(1, 1), (2, 2), (3, 3), (4, 4)],
 )
 def test_sample_function(variable: int, expected_answer: int):
