@@ -6,11 +6,12 @@ from ground_model_utils import ground
 from loguru import logger
 from pressure_utils import PressureSensor
 
-from definitions import EPSILON, FIG_SIZE
+from definitions import EPSILON, FIG_SIZE, WIND_SPEED_X_AXIS
 
 
 def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
-    """Find the state estimate given the state and previous state.
+    """
+    Find the state estimate given the state and previous state.
 
     :param state: current state
     :param x_old: previous state
@@ -36,7 +37,8 @@ def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
 
 
 def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
-    """Find the partial derivatives of the given state.
+    """
+    Find the partial derivatives of the given state.
 
     :param state: current state
     :param x_old: previous state
@@ -45,16 +47,17 @@ def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     x, y = state[0], state[1]
     dx, dy = EPSILON, EPSILON
 
-    dfdx1 = (fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)) / dx
-    dfdx2 = (fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)) / dy
+    df_dx1 = (fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)) / dx
+    df_dx2 = (fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)) / dy
 
-    df = np.hstack((dfdx1, dfdx2))
+    df = np.hstack((df_dx1, df_dx2))
 
     return df
 
 
-def cost(x, y, measurement, var):
-    """Create a cost function to minimize the state uncertainty.
+def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
+    """
+    Create a cost function to minimize the state uncertainty.
 
     :param x: current distance
     :param y: current height
@@ -71,11 +74,12 @@ def cost(x, y, measurement, var):
 
     W = var.T @ var + 0.1 * np.eye(4)
     c = J.T @ np.linalg.inv(W) @ J
-    return c
+    return float(c[0][0])
 
 
 def grad_descent(state, measurement, var):
-    """Perform gradient descent on the cost function.
+    """
+    Perform gradient descent on the cost function.
 
     :param state: current state
     :param measurement: measurement
@@ -90,13 +94,13 @@ def grad_descent(state, measurement, var):
 
     states = [(x, y)]
     for _i in range(100):
-        dfdx = partial_f((x, y), x_old)
+        df_dx = partial_f(np.array([x, y]), x_old)
 
-        f = fx((x, y), x_old)
+        f = fx(np.array([x, y]), x_old)
 
         W = var.T @ var + 0.1 * np.eye(4)
         invW = np.linalg.inv(W)
-        deltaX = np.linalg.inv(dfdx.T @ invW @ dfdx) @ dfdx.T @ (b - f)
+        deltaX = np.linalg.inv(df_dx.T @ invW @ df_dx) @ df_dx.T @ (b - f)
 
         X = X + 5 * deltaX
 
@@ -108,8 +112,9 @@ def grad_descent(state, measurement, var):
     return states
 
 
-def cost_contour(x: np.ndarray, y: np.ndarray, m: float, var: float):
-    """Visualize the cost function gradient.
+def cost_contour(x: np.ndarray, y: np.ndarray, m: tuple, var: np.ndarray) -> np.ndarray:
+    """
+    Visualize the cost function gradient.
 
     :param x: x coordinate
     :param y: y coordinate
@@ -119,12 +124,13 @@ def cost_contour(x: np.ndarray, y: np.ndarray, m: float, var: float):
     J = np.zeros((np.shape(x)[0], np.shape(y)[0]))
     for i in range(np.shape(x)[0]):
         for j in range(np.shape(y)[0]):
-            J[j, i] = cost(x[i], y[j], m, var)
+            J[j, i] = cost_fxn(float(x[i]), float(y[j]), m, var)
     return J
 
 
 def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
-    """Predict the next state given the state and control input.
+    """
+    Predict the next state given the state and control input.
 
     :param state: current state
     :param u: control input
@@ -135,7 +141,7 @@ def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
     return guess
 
 
-def main():
+def main() -> None:
     """Run the main function."""
     # create environment
     plt.figure(2, figsize=FIG_SIZE)
@@ -158,15 +164,13 @@ def main():
     prev = [(state[0, 0], state[1, 0])]
     prev_pred = [(state[0, 0], state[1, 0])]
 
-    wind = +1.0
-
     # find cost contours every step
     for i in range(len(u1) - 1):
         # predictions and control commands
         guess = prediction(state, us[:, i])
         u = np.reshape(us[:, i], (2, 1))
         state += u + np.random.normal(0, scale=var[0, 3], size=(2, 1))
-        state[0, 0] -= np.random.normal(wind, scale=wind / 2)
+        state[0, 0] -= np.random.normal(WIND_SPEED_X_AXIS, scale=WIND_SPEED_X_AXIS / 2)
 
         # measurements
         pressure_sensor = PressureSensor()
@@ -196,7 +200,10 @@ def main():
 
         plt.plot([0, np.max(x)], [h, h], "--", color=[0, 1, 1])
         plt.plot(
-            [state[0], state[0]], [state[1], state[1] - m[1]], "--", color=[0, 1, 0.5]
+            [state[0], state[0]],
+            [state[1], state[1] - m[1]],
+            "--",
+            color=[0, 1, 0.5],
         )
         plt.plot(state[0], state[1], "k*")
 
@@ -205,12 +212,12 @@ def main():
         plt.plot(sx, sy, "r--")
 
         # ground truth
-        prevx, prevy = zip(*prev)
-        prevx_pred, prevy_pred = zip(*prev_pred)
+        prev_x, prev_y = zip(*prev)
+        prev_x_pred, prev_y_pred = zip(*prev_pred)
 
-        plt.plot(prevx[0] + sum(us[0, 0:i]), prevy[0] + sum(us[1, 0:i]), "ro")
-        plt.plot(prevx, prevy, "k--")
-        plt.plot(prevx_pred, prevy_pred, "y--")
+        plt.plot(prev_x[0] + sum(us[0, 0:i]), prev_y[0] + sum(us[1, 0:i]), "ro")
+        plt.plot(prev_x, prev_y, "k--")
+        plt.plot(prev_x_pred, prev_y_pred, "y--")
         plt.legend(
             [
                 "pressure measurement",
@@ -218,7 +225,7 @@ def main():
                 "ground truth",
                 "maximum likelihood estimate",
                 "prediction without measurements",
-            ]
+            ],
         )
 
         # calculate cost function contour
@@ -235,14 +242,14 @@ def main():
         plt.show()
         plt.close()
 
-    diffxLS = np.array(prevx) - np.array(prevx_pred)
-    diffx = np.array(prevx) - prevx[0] - np.cumsum(us[0, :])
+    diffxLS = np.array(prev_x) - np.array(prev_x_pred)
+    diffx = np.array(prev_x) - prev_x[0] - np.cumsum(us[0, :])
 
-    diffyLS = np.array(prevy) - np.array(prevy_pred)
-    diffy = np.array(prevy) - prevy[0] - np.cumsum(us[1, :])
+    diffyLS = np.array(prev_y) - np.array(prev_y_pred)
+    diffy = np.array(prev_y) - prev_y[0] - np.cumsum(us[1, :])
 
-    all = np.vstack((diffxLS, diffx, diffyLS, diffy))
-    lim = np.max(abs(all))
+    all_errors = np.vstack((diffxLS, diffx, diffyLS, diffy))
+    lim = float(np.max(abs(all_errors)))
     plt.figure(3, figsize=FIG_SIZE)
     plt.plot(diffx, "b-")
     plt.plot(diffxLS, "b--")
@@ -254,9 +261,10 @@ def main():
             "x-error - w/ measurements",
             "y-error - w/o measurements",
             "y-error - w/ measurements",
-        ]
+        ],
     )
-    plt.ylim([-lim - 1, lim + 1])
+
+    plt.ylim((-lim - 1, lim + 1))
     plt.xlabel("time (s)")
     plt.ylabel("position error (m)")
     plt.grid(True)
