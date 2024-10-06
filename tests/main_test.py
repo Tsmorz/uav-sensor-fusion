@@ -4,7 +4,8 @@ import pytest
 
 
 def sample_function(variable: int) -> int:
-    """Sample function for testing.
+    """
+    Sample function for testing.
 
     :param variable: variable passed into function.
     :return: variable passed in is passed out.
@@ -13,7 +14,8 @@ def sample_function(variable: int) -> int:
 
 
 @pytest.mark.parametrize(
-    ("variable", "expected_answer"), [(1, 1), (2, 2), (3, 3), (4, 4)]
+    ('variable', 'expected_answer'),
+    [(1, 1), (2, 2), (3, 3), (4, 4)],
 )
 def test_sample_function(variable: int, expected_answer: int):
     """Test sample function."""
