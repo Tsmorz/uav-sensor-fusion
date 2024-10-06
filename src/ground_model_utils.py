@@ -1,10 +1,13 @@
 """public doc string."""
 
+from typing import Any
+
 import numpy as np
 
 
-def ground(x: float) -> float:
-    """Parametric function that models the height given a position.
+def ground(x: np.ndarray[Any, np.dtype]) -> float:
+    """
+    Parametric function that models the height given a position.
 
     :param x: the position in meters
     :return: the height in meters
