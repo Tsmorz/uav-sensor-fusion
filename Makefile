@@ -1,11 +1,11 @@
 SHELL := /bin/bash
 
 init:
-	pip install pre-commit
-	pre-commit install
 	poetry install
+	poetry run pre-commit install
 	poetry env info
 	@echo "Created virtual environment"
+
 test:
 	poetry run pytest --cov=tests/ --no-cov-on-fail
 
