@@ -13,7 +13,10 @@ This is the directory to use the planar drone simulator used to perform state es
 With these three metrics, the drone is able to localize itself by solving a nonlinear least squares problem with the [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). The blue/red contour lines represent the gradient that is decended inorder to minimize the cost function. The solution represents the most likely location given different variances on the process and measurement noise.
 
 ### Setup
-`make init`
+install poetry: https://python-poetry.org/docs/#installation \
+`git clone https://github.com/Tsmorz/uav-sensor-fusion.git` \
+`make init` \
+`poetry shell`
 
 ### Running
 `poetry run python src/main.py`
