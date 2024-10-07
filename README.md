@@ -19,7 +19,7 @@ With these three metrics, the drone is able to localize itself by solving a nonl
 4. `poetry shell` to activate the virtual environment
 
 ## Running
-`python src/main.py` if you're virtual environment is active or `poetry run python src/main.py` if it isn't
+Once your virtual environment is active type: `python src/main.py`
 
 ## Adding to the repo
 1. When wanting to make new changes, please create a new branch first:\
