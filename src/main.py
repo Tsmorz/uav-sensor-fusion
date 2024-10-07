@@ -3,7 +3,7 @@
 import numpy as np
 from loguru import logger
 
-from definitions import EPSILON, WIND_SPEED_X_AXIS
+from definitions import EPSILON, NUM_INPUTS, NUM_STATES, WIND_SPEED_X_AXIS
 from ground_model_utils import ground
 from pressure_utils import PressureSensor
 from src.plot_utils import plot_simulation, plot_state_error
@@ -17,12 +17,11 @@ def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     :param x_old: previous state
     :return: the state estimate
     """
-    num_states = 2
     x, y = state
 
     x_old = np.array([[x_old[0]], [x_old[1]]])
-    A = np.eye(num_states)
-    B = np.eye(num_states)
+    A = np.eye(NUM_STATES)
+    B = np.eye(NUM_STATES)
     est_u = np.linalg.inv(B.T @ B) @ B.T @ (np.array([[x], [y]]) - A @ x_old)
 
     pressure_sensor = PressureSensor()
@@ -136,7 +135,7 @@ def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
     :param u: control input
     :return: the next state predicted given the state and control input
     """
-    u = np.reshape(u, (2, 1))
+    u = np.reshape(u, (NUM_INPUTS, 1))
     guess = state + u
     return guess
 
