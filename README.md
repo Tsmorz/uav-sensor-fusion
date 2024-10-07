@@ -1,6 +1,6 @@
 # UAV Sensor Fusion Research
 
-### Summary
+## Summary
 <img src="docs/drone-simulation.png" width="90%" height="90%">
 
 This is the directory to use the planar drone simulator used to perform state estimation in GPS denied environments but with a known map. The model assumes:
@@ -12,16 +12,16 @@ This is the directory to use the planar drone simulator used to perform state es
 
 With these three metrics, the drone is able to localize itself by solving a nonlinear least squares problem with the [Gauss-Newton algorithm](https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm). The blue/red contour lines represent the gradient that is decended inorder to minimize the cost function. The solution represents the most likely location given different variances on the process and measurement noise.
 
-### Setup
-install poetry: https://python-poetry.org/docs/#installation \
-`git clone https://github.com/Tsmorz/uav-sensor-fusion.git` \
-`make init` \
-`poetry shell`
+## Setup
+1. install [Poetry](https://python-poetry.org/docs/#installation)
+2. `git clone https://github.com/Tsmorz/uav-sensor-fusion.git`
+3. `make init`
+4. `poetry shell`
 
-### Running
+## Running
 `poetry run python src/main.py`
 
-### Adding to the repo
+## Adding to the repo
 When wanting to make new changes, please create a new branch first:\
 `git checkout -b "new_branch_name`
 
