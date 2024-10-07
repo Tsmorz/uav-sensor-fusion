@@ -31,18 +31,6 @@ repos:
     - id: ruff
       types_or: [ python, pyi ]
       args: [ --fix ]
-      select: [
-      "E",
-      "F",
-      "UP",
-      "B",
-      "SIM",
-      "I",
-      "TCH",
-      "D",
-      "ARG",
-      ]
     - id: ruff-format
       types_or: [ python, pyi ]
       args: [ --line-length=100 ]
-      ignore: ["E501"]
