@@ -1,12 +1,12 @@
 """public doc string."""
 
-import matplotlib.pyplot as plt
 import numpy as np
-from ground_model_utils import ground
 from loguru import logger
-from pressure_utils import PressureSensor
 
-from definitions import EPSILON, FIG_SIZE, WIND_SPEED_X_AXIS
+from definitions import EPSILON, WIND_SPEED_X_AXIS
+from ground_model_utils import ground
+from pressure_utils import PressureSensor
+from src.plot_utils import plot_simulation, plot_state_error
 
 
 def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
@@ -77,7 +77,7 @@ def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
     return float(c[0][0])
 
 
-def grad_descent(state, measurement, var):
+def grad_descent(state: tuple, measurement: tuple, var: np.ndarray) -> list:
     """
     Perform gradient descent on the cost function.
 
@@ -144,11 +144,8 @@ def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
 def main() -> None:
     """Run the main function."""
     # create environment
-    plt.figure(2, figsize=FIG_SIZE)
     x = np.linspace(0, 100, 40)
     y = np.linspace(0, 50, 40)
-    [X, Y] = np.meshgrid(x, y)
-    g = ground(x)
 
     # initial state
     state = np.array([[5.0], [10.0]])
@@ -191,56 +188,17 @@ def main() -> None:
         sx, sy = zip(*sol)
         prev_pred.append((sx[-1], sy[-1]))
 
-        # plot new data
-        plt.cla()
-
         # plot measurements
         pressure_sensor = PressureSensor()
         h = pressure_sensor.pressure2height(pressure=m[0])
-
-        plt.plot([0, np.max(x)], [h, h], "--", color=[0, 1, 1])
-        plt.plot(
-            [state[0], state[0]],
-            [state[1], state[1] - m[1]],
-            "--",
-            color=[0, 1, 0.5],
-        )
-        plt.plot(state[0], state[1], "k*")
-
-        # gradient descent
-        plt.plot(sx[-1], sy[-1], "y*")
-        plt.plot(sx, sy, "r--")
 
         # ground truth
         prev_x, prev_y = zip(*prev)
         prev_x_pred, prev_y_pred = zip(*prev_pred)
 
-        plt.plot(prev_x[0] + sum(us[0, 0:i]), prev_y[0] + sum(us[1, 0:i]), "ro")
-        plt.plot(prev_x, prev_y, "k--")
-        plt.plot(prev_x_pred, prev_y_pred, "y--")
-        plt.legend(
-            [
-                "pressure measurement",
-                "lidar measurement",
-                "ground truth",
-                "maximum likelihood estimate",
-                "prediction without measurements",
-            ],
-        )
-
         # calculate cost function contour
-        J = cost_contour(x, y, m, var)
-        plt.contourf(X, Y, J, 100, cmap="RdBu_r")
-        plt.fill_between(x, 0, g, color="green")
-
-        plt.xlabel("x-axis (m)")
-        plt.ylabel("y-axis (m)")
-        plt.title("Nonlinear Least Squares Drone Localization")
-        plt.xlim([0, 100])
-        plt.ylim([0, 40])
-
-        plt.show()
-        plt.close()
+        j = cost_contour(x, y, m, var)
+        plot_simulation(state, h, j, sx, sy, prev, prev_pred, us, m, i)
 
     diffxLS = np.array(prev_x) - np.array(prev_x_pred)
     diffx = np.array(prev_x) - prev_x[0] - np.cumsum(us[0, :])
@@ -248,33 +206,13 @@ def main() -> None:
     diffyLS = np.array(prev_y) - np.array(prev_y_pred)
     diffy = np.array(prev_y) - prev_y[0] - np.cumsum(us[1, :])
 
-    all_errors = np.vstack((diffxLS, diffx, diffyLS, diffy))
-    lim = float(np.max(abs(all_errors)))
-    plt.figure(3, figsize=FIG_SIZE)
-    plt.plot(diffx, "b-")
-    plt.plot(diffxLS, "b--")
-    plt.plot(diffy, "r-")
-    plt.plot(diffyLS, "r--")
-    plt.legend(
-        [
-            "x-error - w/o measurements",
-            "x-error - w/ measurements",
-            "y-error - w/o measurements",
-            "y-error - w/ measurements",
-        ],
-    )
-
-    plt.ylim((-lim - 1, lim + 1))
-    plt.xlabel("time (s)")
-    plt.ylabel("position error (m)")
-    plt.grid(True)
-    plt.show()
+    plot_state_error(diffxLS, diffx, diffyLS, diffy)
 
     logger.info(np.std(diffx))
     logger.info(np.std(diffy))
-
     logger.info(np.std(diffxLS))
     logger.info(np.std(diffyLS))
+
     return
 
 
