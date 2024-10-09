@@ -15,20 +15,20 @@ With these three metrics, the drone is able to localize itself by solving a nonl
 ## Setup
 1. install [Poetry](https://python-poetry.org/docs/#installation)
 2. `git clone https://github.com/Tsmorz/uav-sensor-fusion.git`
-3. `make init`
-4. `poetry shell`
+3. `make init` to set up the virtual environment
+4. `poetry shell` to activate the virtual environment
 
 ## Running
-`poetry run python src/main.py`
+Once your virtual environment is active type: `python src/main.py`
 
 ## Adding to the repo
-When wanting to make new changes, please create a new branch first:\
+1. When wanting to make new changes, please create a new branch first:\
 `git checkout -b new-branch-name`
 
-While making changes in your new branch, keep track of changes with:\
+2. While making changes in your new branch, keep track of changes with:\
 `git add file_that_changed`\
 `git commit -m "a useful message"`\
 `git push`
 
-With new functionality, please create new unit and integration tests to make development easier in the future. Your tests should be added to the `tests` directory.
+3. With new functionality, please create new unit and integration tests to make development easier in the future. Your tests should be added to the `tests` directory.
 Tests should be run with: `make test`
