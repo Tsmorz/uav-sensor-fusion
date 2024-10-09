@@ -10,7 +10,7 @@ test:
 	poetry run pytest --cov=tests/ --no-cov-on-fail
 
 format:
-	ruff format --line-length=100
+	ruff format --line-length=80
 	ruff check --fix
 	poetry run mypy --ignore-missing-imports src/
 
