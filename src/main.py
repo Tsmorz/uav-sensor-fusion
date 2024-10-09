@@ -27,7 +27,7 @@ def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     """
     x, y = state
 
-    x_old = np.array([[x_old[0]], [x_old[1]]])
+    x_old = np.reshape(x_old, (NUM_STATES, 1))
     A = np.eye(NUM_STATES)
     B = np.eye(NUM_STATES)
     est_u = np.linalg.inv(B.T @ B) @ B.T @ (np.array([[x], [y]]) - A @ x_old)
@@ -55,11 +55,11 @@ def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     dx, dy = EPSILON, EPSILON
 
     df_dx1 = (
-        fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)
-    ) / dx
+        fx(np.array([x + dx, y]), x_old) - fx(np.array([x - dx, y]), x_old)
+    ) / (2 * dx)
     df_dx2 = (
-        fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)
-    ) / dy
+        fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y - dy]), x_old)
+    ) / (2 * dy)
 
     df = np.hstack((df_dx1, df_dx2))
 
@@ -205,8 +205,8 @@ def main() -> None:
         p = pressure_sensor.height2pressure(height=state[1, 0])
         r = state[1, 0] - ground(state[0, 0])
         m = (
-            p + np.random.normal(0, scale=var[0, 0]),
-            r + np.random.normal(0, scale=var[0, 1]),
+            p + np.random.normal(0, scale=PRESSURE_VARIANCE),
+            r + np.random.normal(0, scale=LIDAR_VARIANCE),
             prev[i],
             u,
         )
