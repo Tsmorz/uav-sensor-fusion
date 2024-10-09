@@ -3,7 +3,15 @@
 import numpy as np
 from loguru import logger
 
-from definitions import EPSILON, NUM_INPUTS, NUM_STATES, WIND_SPEED_X_AXIS
+from definitions import (
+    CONTROL_VARIANCE,
+    EPSILON,
+    LIDAR_VARIANCE,
+    NUM_INPUTS,
+    NUM_STATES,
+    PRESSURE_VARIANCE,
+    WIND_SPEED_X_AXIS,
+)
 from ground_model_utils import ground
 from pressure_utils import PressureSensor
 from src.plot_utils import plot_simulation, plot_state_error
@@ -46,8 +54,12 @@ def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     x, y = state[0], state[1]
     dx, dy = EPSILON, EPSILON
 
-    df_dx1 = (fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)) / dx
-    df_dx2 = (fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)) / dy
+    df_dx1 = (
+        fx(np.array([x + dx, y]), x_old) - fx(np.array([x, y]), x_old)
+    ) / dx
+    df_dx2 = (
+        fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y]), x_old)
+    ) / dy
 
     df = np.hstack((df_dx1, df_dx2))
 
@@ -63,6 +75,7 @@ def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
     :param measurement: measurement
     :param var: covariance matrix
     """
+    epsilon = 1e-1
     p, r, x_old, u = measurement
 
     f = fx(np.array([x, y]), x_old)
@@ -71,7 +84,7 @@ def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
 
     J = f - b
 
-    W = var.T @ var + 0.1 * np.eye(4)
+    W = var.T @ var + epsilon * np.eye(4)
     c = J.T @ np.linalg.inv(W) @ J
     return float(c[0][0])
 
@@ -92,16 +105,19 @@ def grad_descent(state: tuple, measurement: tuple, var: np.ndarray) -> list:
     b = np.array([[p], [r], [u[0, 0]], [u[1, 0]]])
 
     states = [(x, y)]
-    for _i in range(100):
+    num_steps = 1000
+    learning_rate = 1e-1
+    epsilon = 1e-1
+    for _i in range(num_steps):
         df_dx = partial_f(np.array([x, y]), x_old)
 
         f = fx(np.array([x, y]), x_old)
 
-        W = var.T @ var + 0.1 * np.eye(4)
+        W = var.T @ var + epsilon * np.eye(4)
         invW = np.linalg.inv(W)
         deltaX = np.linalg.inv(df_dx.T @ invW @ df_dx) @ df_dx.T @ (b - f)
 
-        X = X + 5 * deltaX
+        X = X + learning_rate * deltaX
 
         x = X[0, 0]
         y = X[1, 0]
@@ -111,7 +127,9 @@ def grad_descent(state: tuple, measurement: tuple, var: np.ndarray) -> list:
     return states
 
 
-def cost_contour(x: np.ndarray, y: np.ndarray, m: tuple, var: np.ndarray) -> np.ndarray:
+def cost_contour(
+    x: np.ndarray, y: np.ndarray, m: tuple, var: np.ndarray
+) -> np.ndarray:
     """
     Visualize the cost function gradient.
 
@@ -147,26 +165,40 @@ def main() -> None:
     y = np.linspace(0, 50, 40)
 
     # initial state
-    state = np.array([[5.0], [10.0]])
-    var = np.array([[1.0, 0.1, 0.5, 0.5]])
+    init_x, init_y = 5.0, 10.0
+    state = np.array([[init_x], [init_y]])
+    var = np.array(
+        [
+            [
+                PRESSURE_VARIANCE,
+                LIDAR_VARIANCE,
+                CONTROL_VARIANCE,
+                CONTROL_VARIANCE,
+            ]
+        ]
+    )
 
     # control commands
-    t = 40
-    u1 = 2 * np.ones(t)
-    u2 = np.sin(4 * np.arange(t) / t)
-    us = np.vstack((u1, u2))
+    max_time_steps = 40
+    u_x = 2 * np.ones(max_time_steps)
+    u_y = np.sin(4 * np.arange(max_time_steps) / max_time_steps)
+    us = np.vstack((u_x, u_y))
 
     # store previous states
     prev = [(state[0, 0], state[1, 0])]
     prev_pred = [(state[0, 0], state[1, 0])]
 
     # find cost contours every step
-    for i in range(len(u1) - 1):
+    for i in range(max_time_steps - 1):
         # predictions and control commands
         guess = prediction(state, us[:, i])
-        u = np.reshape(us[:, i], (2, 1))
-        state += u + np.random.normal(0, scale=var[0, 3], size=(2, 1))
-        state[0, 0] -= np.random.normal(WIND_SPEED_X_AXIS, scale=WIND_SPEED_X_AXIS / 2)
+        u = np.reshape(us[:, i], (NUM_INPUTS, 1))
+        state += u + np.random.normal(
+            0, scale=CONTROL_VARIANCE, size=(NUM_INPUTS, 1)
+        )
+        state[0, 0] -= np.random.normal(
+            WIND_SPEED_X_AXIS, scale=WIND_SPEED_X_AXIS / 2
+        )
 
         # measurements
         pressure_sensor = PressureSensor()
