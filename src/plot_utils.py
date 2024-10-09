@@ -8,7 +8,10 @@ from src.ground_model_utils import ground
 
 
 def plot_state_error(
-    diffxLS: np.ndarray, diffx: np.ndarray, diffyLS: np.ndarray, diffy: np.ndarray
+    diffxLS: np.ndarray,
+    diffx: np.ndarray,
+    diffyLS: np.ndarray,
+    diffy: np.ndarray,
 ) -> None:
     """
     Plot the state error after the simulation is complete.

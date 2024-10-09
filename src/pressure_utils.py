@@ -37,7 +37,9 @@ class PressureSensor:
         :return: the pressure in Pascals
         """
         noise = np.random.normal(0, scale=self.variance)
-        p = self.p0 * np.exp(-self.g * self.M * (height - self.h0) / self.R / self.T)
+        p = self.p0 * np.exp(
+            -self.g * self.M * (height - self.h0) / self.R / self.T
+        )
 
         return p + noise
 
@@ -50,6 +52,9 @@ class PressureSensor:
         :return: the height in meters
         """
         noise = np.random.normal(0, scale=self.variance)
-        h = self.h0 - np.log(pressure / self.p0) * self.R * self.T / self.g / self.M
+        h = (
+            self.h0
+            - np.log(pressure / self.p0) * self.R * self.T / self.g / self.M
+        )
 
         return h + noise
