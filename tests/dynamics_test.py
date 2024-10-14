@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.dynamics_utils import matrix_exponential, skew
+from src.math_utils import matrix_exponential, skew
 
 
 @pytest.mark.parametrize(

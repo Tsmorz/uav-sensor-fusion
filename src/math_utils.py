@@ -1,7 +1,6 @@
 """public doc string."""
 
 import numpy as np
-import numpy.linalg as LA
 
 
 def skew(vector: np.ndarray) -> np.ndarray:
@@ -39,10 +38,10 @@ def matrix_exponential(matrix: np.ndarray, t: float = 1.0) -> np.ndarray:
         raise ValueError("Input matrix must be square.")
 
     num = np.shape(matrix)[0]
-    val, vec = LA.eig(matrix)
+    val, vec = np.linalg.eig(matrix)
 
     s = np.eye(num)
-    matrax_exp = vec @ (np.exp(val * t) * s) @ LA.inv(vec)
+    matrax_exp = vec @ (np.exp(val * t) * s) @ np.linalg.inv(vec)
     return matrax_exp.real
 
 
