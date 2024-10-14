@@ -7,7 +7,7 @@ init:
 	@echo "Created virtual environment"
 
 test:
-	poetry run pytest --cov=tests/ --no-cov-on-fail
+	poetry run pytest --cov=src/ --no-cov-on-fail --cov-report term-missing
 
 format:
 	ruff format --line-length=80

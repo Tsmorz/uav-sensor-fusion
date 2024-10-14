@@ -43,12 +43,3 @@ def matrix_exponential(matrix: np.ndarray, t: float = 1.0) -> np.ndarray:
     s = np.eye(num)
     matrax_exp = vec @ (np.exp(val * t) * s) @ np.linalg.inv(vec)
     return matrax_exp.real
-
-
-def main():
-    """Test the dynamics functions within this module."""
-    return
-
-
-if __name__ == "__main__":
-    main()

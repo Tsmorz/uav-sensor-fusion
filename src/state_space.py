@@ -36,7 +36,9 @@ class StateSpace:
         self.D = D
         pass
 
-    def predict(self, state: np.ndarray, control: np.ndarray) -> np.ndarray:
+    def predict(
+        self, state: np.ndarray, control: Optional[np.ndarray] = None
+    ) -> np.ndarray:
         """
         Predict the next state with the given control input.
 
@@ -44,6 +46,9 @@ class StateSpace:
         :param control: control input
          :return: the next state predicted with the given control input
         """
+        if control is None:
+            control = np.zeros((np.shape(self.B)[1], 1))
+
         return self.A @ state + self.B @ control
 
     def cont2disc(self, dt) -> tuple[np.ndarray, np.ndarray]:

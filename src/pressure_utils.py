@@ -1,6 +1,6 @@
 """public doc string."""
 
-from typing import Any
+from typing import Optional
 
 import numpy as np
 
@@ -9,15 +9,20 @@ from definitions import (
     GRAVITY_ACCELERATION_METRIC,
     MOLAR_MASS,
     PRESSURE_SEA_LEVEL,
+    PRESSURE_VARIANCE,
     SEA_LEVEL_METERS,
     TEMP_KELVIN,
 )
 
 
 class PressureSensor:
-    """Pressure sensor class."""
+    """
+    Pressure sensor class to find pressure or height based on the other.
 
-    def __init__(self, noise_variance=0.1):
+    Source - https://en.wikipedia.org/wiki/Barometric_formula
+    """
+
+    def __init__(self, noise_variance: Optional[float] = PRESSURE_VARIANCE):
         """Create a pressure sensor."""
         self.h0 = SEA_LEVEL_METERS
         self.p0 = PRESSURE_SEA_LEVEL
@@ -28,7 +33,7 @@ class PressureSensor:
         self.variance = noise_variance
         pass
 
-    def height2pressure(self, height: np.ndarray[Any, np.dtype]) -> float:
+    def height2pressure(self, height: float) -> float:
         """
         Find the pressure given a height.
 
@@ -36,7 +41,7 @@ class PressureSensor:
         :param height: the height in meters
         :return: the pressure in Pascals
         """
-        noise = np.random.normal(0, scale=self.variance)
+        noise = np.random.normal(0, scale=np.array(self.variance))
         p = self.p0 * np.exp(
             -self.g * self.M * (height - self.h0) / self.R / self.T
         )
@@ -51,7 +56,7 @@ class PressureSensor:
         :param pressure: the pressure measurement in Pascals
         :return: the height in meters
         """
-        noise = np.random.normal(0, scale=self.variance)
+        noise = np.random.normal(0, scale=np.array(self.variance))
         h = (
             self.h0
             - np.log(pressure / self.p0) * self.R * self.T / self.g / self.M
