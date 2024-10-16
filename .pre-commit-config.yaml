@@ -30,7 +30,7 @@ repos:
   hooks:
     - id: ruff
       types_or: [ python, pyi ]
-      args: [ --fix --select I]
+      args: [ --fix,  --select I]
     - id: ruff-format
       types_or: [ python, pyi ]
-      args: [ --line-length=80 ]
+      args: [ --line-length=80]
