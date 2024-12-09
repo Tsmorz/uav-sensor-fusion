@@ -5,7 +5,9 @@ from loguru import logger
 
 from definitions import (
     CONTROL_VARIANCE,
+    DAMPING_FACTOR,
     EPSILON,
+    LEARNING_RATE,
     LIDAR_VARIANCE,
     NUM_INPUTS,
     NUM_STATES,
@@ -89,35 +91,39 @@ def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
     return float(c[0][0])
 
 
-def grad_descent(state: tuple, measurement: tuple, var: np.ndarray) -> list:
+def grad_descent(
+    state: tuple, measurement: tuple, variances: np.ndarray
+) -> list:
     """
     Perform gradient descent on the cost function.
 
     :param state: current state
     :param measurement: measurement
-    :param var: covariance matrix
+    :param variances: vector of measurement and state variances
+    :return list of estimated states
     """
-    p, r, x_old, u = measurement
+    pressure, time_of_flight, state_old, control = measurement
     x, y = state
+    cov_var = variances.T @ variances
 
     X = np.array([[x], [y]])
 
-    b = np.array([[p], [r], [u[0, 0]], [u[1, 0]]])
+    b = np.array(
+        [[pressure], [time_of_flight], [control[0, 0]], [control[1, 0]]]
+    )
 
     states = [(x, y)]
     num_steps = 1000
-    learning_rate = 1e-1
-    epsilon = 1e-1
     for _i in range(num_steps):
-        df_dx = partial_f(np.array([x, y]), x_old)
+        df_dx = partial_f(np.array([x, y]), state_old)
 
-        f = fx(np.array([x, y]), x_old)
+        f = fx(np.array([x, y]), state_old)
 
-        W = var.T @ var + epsilon * np.eye(4)
+        W = cov_var + DAMPING_FACTOR * np.eye(len(variances))
         invW = np.linalg.inv(W)
         deltaX = np.linalg.inv(df_dx.T @ invW @ df_dx) @ df_dx.T @ (b - f)
 
-        X = X + learning_rate * deltaX
+        X = X + LEARNING_RATE * deltaX
 
         x = X[0, 0]
         y = X[1, 0]
