@@ -1,22 +1,29 @@
 """public doc string."""
 
+import argparse
+import copy
+
 import numpy as np
 from loguru import logger
 
 from definitions import (
     CONTROL_VARIANCE,
     DAMPING_FACTOR,
+    DEFAULT_VARIANCES,
     EPSILON,
     LEARNING_RATE,
-    LIDAR_VARIANCE,
+    NUM_COST_CONTOURS,
     NUM_INPUTS,
     NUM_STATES,
     PRESSURE_VARIANCE,
+    SIMULATION_DIMENSIONS,
+    TIME_OF_FLIGHT_VARIANCE,
+    WIND_SPEED_VAR,
     WIND_SPEED_X_AXIS,
 )
 from ground_model_utils import ground
+from plot_utils import plot_simulation, plot_state_error
 from pressure_utils import PressureSensor
-from src.plot_utils import plot_simulation, plot_state_error
 
 
 def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
@@ -119,7 +126,7 @@ def grad_descent(
 
         f = fx(np.array([x, y]), state_old)
 
-        W = cov_var + DAMPING_FACTOR * np.eye(len(variances))
+        W = cov_var + DAMPING_FACTOR * np.eye(np.shape(cov_var)[1])
         invW = np.linalg.inv(W)
         deltaX = np.linalg.inv(df_dx.T @ invW @ df_dx) @ df_dx.T @ (b - f)
 
@@ -133,22 +140,24 @@ def grad_descent(
     return states
 
 
-def cost_contour(
-    x: np.ndarray, y: np.ndarray, m: tuple, var: np.ndarray
-) -> np.ndarray:
+def cost_contours(measurement: tuple, variances: np.ndarray) -> np.ndarray:
     """
     Visualize the cost function gradient.
 
-    :param x: x coordinate
-    :param y: y coordinate
-    :param m: measurement from sensor
-    :param var: measurement noise
+    :param measurement: measurement from sensor
+    :param variances: measurement noise
+    :return: a 2D array representing the cost function at each point
     """
-    J = np.zeros((np.shape(x)[0], np.shape(y)[0]))
+    x = np.linspace(0, SIMULATION_DIMENSIONS[0], NUM_COST_CONTOURS)
+    y = np.linspace(0, SIMULATION_DIMENSIONS[1], NUM_COST_CONTOURS)
+
+    cost = np.zeros((np.shape(x)[0], np.shape(y)[0]))
     for i in range(np.shape(x)[0]):
         for j in range(np.shape(y)[0]):
-            J[j, i] = cost_fxn(float(x[i]), float(y[j]), m, var)
-    return J
+            cost[j, i] = cost_fxn(
+                float(x[i]), float(y[j]), measurement, variances
+            )
+    return cost
 
 
 def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
@@ -164,55 +173,51 @@ def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
     return guess
 
 
-def main() -> None:
-    """Run the main function."""
+def run_simulation(
+    initial_state: tuple,
+    control_inputs: np.ndarray,
+    variances: tuple = DEFAULT_VARIANCES,
+    show_simulation: bool = True,
+) -> tuple[list, list]:
+    """
+    Run the simulation for a given initial state and all control inputs.
+
+    :param initial_state: initial state
+    :param control_inputs: control inputs for all time steps
+    :param variances: vector of measurement and state variances
+    :param show_simulation: whether to plot the simulation
+    :return: list of ground truths and list of estimated states
+    """
     # create environment
-    x = np.linspace(0, 100, 40)
-    y = np.linspace(0, 50, 40)
 
-    # initial state
-    init_x, init_y = 5.0, 10.0
-    state = np.array([[init_x], [init_y]])
-    var = np.array(
-        [
-            [
-                PRESSURE_VARIANCE,
-                LIDAR_VARIANCE,
-                CONTROL_VARIANCE,
-                CONTROL_VARIANCE,
-            ]
-        ]
-    )
-
-    # control commands
-    max_time_steps = 40
-    u_x = 2 * np.ones(max_time_steps)
-    u_y = np.sin(4 * np.arange(max_time_steps) / max_time_steps)
-    us = np.vstack((u_x, u_y))
-
-    # store previous states
+    max_time_steps = np.shape(control_inputs)[1]
+    state = np.array([[initial_state[0]], [initial_state[1]]])
     prev = [(state[0, 0], state[1, 0])]
-    prev_pred = [(state[0, 0], state[1, 0])]
+    prev_pred = copy.deepcopy(prev)
+
+    num_inputs = np.shape(control_inputs)[0]
+
+    variances_array = np.array(
+        [[variances[0], variances[1], variances[2], variances[3]]]
+    )
 
     # find cost contours every step
     for i in range(max_time_steps - 1):
         # predictions and control commands
-        guess = prediction(state, us[:, i])
-        u = np.reshape(us[:, i], (NUM_INPUTS, 1))
+        guess = prediction(state, control_inputs[:, i])
+        u = np.reshape(control_inputs[:, i], (num_inputs, 1))
         state += u + np.random.normal(
-            0, scale=CONTROL_VARIANCE, size=(NUM_INPUTS, 1)
+            0, scale=CONTROL_VARIANCE, size=(num_inputs, 1)
         )
-        state[0, 0] -= np.random.normal(
-            WIND_SPEED_X_AXIS, scale=WIND_SPEED_X_AXIS / 2
-        )
+        state[0, 0] += WIND_SPEED_X_AXIS + np.random.normal(WIND_SPEED_VAR)
 
         # measurements
         pressure_sensor = PressureSensor()
-        p = pressure_sensor.height2pressure(height=state[1, 0])
-        r = state[1, 0] - ground(state[0, 0])
-        m = (
-            p + np.random.normal(0, scale=PRESSURE_VARIANCE),
-            r + np.random.normal(0, scale=LIDAR_VARIANCE),
+        pressure = pressure_sensor.height2pressure(height=float(state[1, 0]))
+        time_of_flight = state[1, 0] - ground(state[0, 0])
+        measurements = (
+            pressure + np.random.normal(0, scale=PRESSURE_VARIANCE),
+            time_of_flight + np.random.normal(0, scale=TIME_OF_FLIGHT_VARIANCE),
             prev[i],
             u,
         )
@@ -221,37 +226,90 @@ def main() -> None:
         prev.append((state[0, 0], state[1, 0]))
 
         # store prediction
-        sol = grad_descent((guess[0, 0] - 10, guess[1, 0] + 10), m, var)
+        sol = grad_descent(
+            (guess[0, 0] - 10, guess[1, 0] + 10), measurements, variances_array
+        )
         sx, sy = zip(*sol)
         prev_pred.append((sx[-1], sy[-1]))
 
         # plot measurements
         pressure_sensor = PressureSensor()
-        h = pressure_sensor.pressure2height(pressure=m[0])
-
-        # ground truth
-        prev_x, prev_y = zip(*prev)
-        prev_x_pred, prev_y_pred = zip(*prev_pred)
+        h = pressure_sensor.pressure2height(pressure=measurements[0])
 
         # calculate cost function contour
-        j = cost_contour(x, y, m, var)
-        plot_simulation(state, h, j, sx, sy, prev, prev_pred, us, m, i)
+        if show_simulation:
+            j = cost_contours(
+                measurement=measurements, variances=variances_array
+            )
+            plot_simulation(
+                state,
+                h,
+                j,
+                sx,
+                sy,
+                prev,
+                prev_pred,
+                control_inputs,
+                measurements,
+                i,
+            )
+    return prev, prev_pred
+
+
+def main(show_sim: bool) -> None:
+    """
+    Run the main function.
+
+    :param show_sim: whether to show the simulation
+    """
+    # initial state
+    init_x, init_y = 5.0, 10.0
+
+    # control commands
+    max_time_steps = 40
+    controls_xy = np.vstack(
+        (
+            2 * np.ones(max_time_steps),  # x input
+            np.sin(4 * np.arange(max_time_steps) / max_time_steps),  # y input
+        )
+    )
+
+    prev, prev_pred = run_simulation(
+        initial_state=(init_x, init_y),
+        control_inputs=controls_xy,
+        show_simulation=show_sim,
+    )
+
+    # ground truth
+    prev_x, prev_y = zip(*prev)
+    prev_x_pred, prev_y_pred = zip(*prev_pred)
 
     diffxLS = np.array(prev_x) - np.array(prev_x_pred)
-    diffx = np.array(prev_x) - prev_x[0] - np.cumsum(us[0, :])
+    diffx = np.array(prev_x) - prev_x[0] - np.cumsum(controls_xy[0, :])
 
     diffyLS = np.array(prev_y) - np.array(prev_y_pred)
-    diffy = np.array(prev_y) - prev_y[0] - np.cumsum(us[1, :])
+    diffy = np.array(prev_y) - prev_y[0] - np.cumsum(controls_xy[1, :])
 
     plot_state_error(diffxLS, diffx, diffyLS, diffy)
 
-    logger.info(np.std(diffx))
-    logger.info(np.std(diffy))
-    logger.info(np.std(diffxLS))
-    logger.info(np.std(diffyLS))
+    logger.info(
+        f"State error w/o measurements:\n"
+        f"\t X: {np.std(diffx):.2f}\n"
+        f"\t Y: {np.std(diffy):.2f}"
+    )
+    logger.info(
+        f"State error w/ measurements:\n"
+        f"\t X: {np.std(diffxLS):.2f}\n"
+        f"\t Y: {np.std(diffyLS):.2f}"
+    )
 
     return
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Simulation inputs")
+    parser.add_argument("--hide", action="store_true")
+
+    args = parser.parse_args()
+
+    main(show_sim=not args.hide)

@@ -1,6 +1,6 @@
 """public doc string."""
 
-from definitions import PRESSURE_SEA_LEVEL, SEA_LEVEL_METERS
+from src.definitions import PRESSURE_SEA_LEVEL, SEA_LEVEL_METERS
 from src.pressure_utils import PressureSensor
 
 
