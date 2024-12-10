@@ -1,28 +1,27 @@
 """public doc string."""
 
-import pytest
+import numpy as np
+
+from definitions import NUM_INPUTS
+from src.main import run_simulation
 
 
-def sample_function(variable: int) -> int:
-    """
-    Sample function for testing.
-
-    :param variable: variable passed into function.
-    :return: variable passed in is passed out.
-    """
-    return variable
-
-
-@pytest.mark.parametrize(
-    ("variable", "expected_answer"),
-    [(1, 1), (2, 2), (3, 3), (4, 4)],
-)
-def test_sample_function(variable: int, expected_answer: int):
+def test_run_simulation():
     """Test sample function."""
     # Arrange
+    variances = (0.0, 0.0, 0.0, 0.0)
+    num_steps = 5
 
     # Act
-    answer = sample_function(variable)
+    truth, estimate = run_simulation(
+        initial_state=(0.0, 0.0),
+        control_inputs=np.zeros((NUM_INPUTS, num_steps)),
+        variances=variances,
+        show_simulation=False,
+    )
+
+    truth = np.array(truth)
+    estimate = np.array(estimate)
 
     # Assert
-    assert answer == expected_answer
+    np.testing.assert_almost_equal(truth, estimate, decimal=3)

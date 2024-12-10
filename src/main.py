@@ -7,7 +7,6 @@ import numpy as np
 from loguru import logger
 
 from definitions import (
-    CONTROL_VARIANCE,
     DAMPING_FACTOR,
     DEFAULT_VARIANCES,
     EPSILON,
@@ -15,15 +14,12 @@ from definitions import (
     NUM_COST_CONTOURS,
     NUM_INPUTS,
     NUM_STATES,
-    PRESSURE_VARIANCE,
     SIMULATION_DIMENSIONS,
-    TIME_OF_FLIGHT_VARIANCE,
-    WIND_SPEED_VAR,
     WIND_SPEED_X_AXIS,
 )
-from ground_model_utils import ground
-from plot_utils import plot_simulation, plot_state_error
-from pressure_utils import PressureSensor
+from src.ground_model_utils import ground
+from src.plot_utils import plot_simulation, plot_state_error
+from src.pressure_utils import PressureSensor
 
 
 def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
@@ -120,7 +116,7 @@ def grad_descent(
     )
 
     states = [(x, y)]
-    num_steps = 1000
+    num_steps = 10000
     for _i in range(num_steps):
         df_dx = partial_f(np.array([x, y]), state_old)
 
@@ -189,6 +185,7 @@ def run_simulation(
     :return: list of ground truths and list of estimated states
     """
     # create environment
+    pressure_variance, time_of_flight_variance, control_variance, _ = variances
 
     max_time_steps = np.shape(control_inputs)[1]
     state = np.array([[initial_state[0]], [initial_state[1]]])
@@ -198,8 +195,17 @@ def run_simulation(
     num_inputs = np.shape(control_inputs)[0]
 
     variances_array = np.array(
-        [[variances[0], variances[1], variances[2], variances[3]]]
+        [
+            [
+                pressure_variance,
+                time_of_flight_variance,
+                control_variance,
+                control_variance,
+            ]
+        ]
     )
+
+    pressure_sensor = PressureSensor(noise_variance=pressure_variance)
 
     # find cost contours every step
     for i in range(max_time_steps - 1):
@@ -207,17 +213,16 @@ def run_simulation(
         guess = prediction(state, control_inputs[:, i])
         u = np.reshape(control_inputs[:, i], (num_inputs, 1))
         state += u + np.random.normal(
-            0, scale=CONTROL_VARIANCE, size=(num_inputs, 1)
+            0, scale=control_variance, size=(num_inputs, 1)
         )
-        state[0, 0] += WIND_SPEED_X_AXIS + np.random.normal(WIND_SPEED_VAR)
+        state[0, 0] += WIND_SPEED_X_AXIS  # + np.random.normal(WIND_SPEED_VAR)
 
         # measurements
-        pressure_sensor = PressureSensor()
         pressure = pressure_sensor.height2pressure(height=float(state[1, 0]))
         time_of_flight = state[1, 0] - ground(state[0, 0])
         measurements = (
-            pressure + np.random.normal(0, scale=PRESSURE_VARIANCE),
-            time_of_flight + np.random.normal(0, scale=TIME_OF_FLIGHT_VARIANCE),
+            pressure + np.random.normal(0, scale=pressure_variance),
+            time_of_flight + np.random.normal(0, scale=time_of_flight_variance),
             prev[i],
             u,
         )
@@ -226,14 +231,17 @@ def run_simulation(
         prev.append((state[0, 0], state[1, 0]))
 
         # store prediction
+        offset = 10.0 if show_simulation else 0.0
+
         sol = grad_descent(
-            (guess[0, 0] - 10, guess[1, 0] + 10), measurements, variances_array
+            (guess[0, 0] - offset, guess[1, 0] + offset),
+            measurements,
+            variances_array,
         )
         sx, sy = zip(*sol)
         prev_pred.append((sx[-1], sy[-1]))
 
         # plot measurements
-        pressure_sensor = PressureSensor()
         h = pressure_sensor.pressure2height(pressure=measurements[0])
 
         # calculate cost function contour

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from definitions import FIG_SIZE
-from ground_model_utils import ground
+from src.ground_model_utils import ground
 
 
 def plot_state_error(
