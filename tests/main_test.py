@@ -3,7 +3,7 @@
 import numpy as np
 
 from definitions import NUM_INPUTS
-from src.main import run_simulation
+from main import run_simulation
 
 
 def test_run_simulation():

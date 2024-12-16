@@ -11,41 +11,16 @@ from definitions import (
     DEFAULT_VARIANCES,
     EPSILON,
     LEARNING_RATE,
-    NUM_COST_CONTOURS,
     NUM_INPUTS,
-    NUM_STATES,
-    SIMULATION_DIMENSIONS,
     WIND_SPEED_X_AXIS,
 )
 from src.ground_model_utils import ground
-from src.plot_utils import plot_simulation, plot_state_error
+from src.plot_utils import (
+    fx,
+    plot_simulation,
+    plot_state_error,
+)
 from src.pressure_utils import PressureSensor
-
-
-def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
-    """
-    Find the state estimate given the state and previous state.
-
-    :param state: current state
-    :param x_old: previous state
-    :return: the state estimate
-    """
-    x, y = state
-
-    x_old = np.reshape(x_old, (NUM_STATES, 1))
-    A = np.eye(NUM_STATES)
-    B = np.eye(NUM_STATES)
-    est_u = np.linalg.inv(B.T @ B) @ B.T @ (np.array([[x], [y]]) - A @ x_old)
-
-    pressure_sensor = PressureSensor()
-    f1 = pressure_sensor.height2pressure(height=y)
-    f2 = y - ground(x)
-    f3 = est_u[0, 0]
-    f4 = est_u[1, 0]
-
-    f = np.array([[f1], [f2], [f3], [f4]])
-
-    return f
 
 
 def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
@@ -69,29 +44,6 @@ def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     df = np.hstack((df_dx1, df_dx2))
 
     return df
-
-
-def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
-    """
-    Create a cost function to minimize the state uncertainty.
-
-    :param x: current distance
-    :param y: current height
-    :param measurement: measurement
-    :param var: covariance matrix
-    """
-    epsilon = 1e-1
-    p, r, x_old, u = measurement
-
-    f = fx(np.array([x, y]), x_old)
-
-    b = np.array([[p], [r], [u[0, 0]], [u[1, 0]]])
-
-    J = f - b
-
-    W = var.T @ var + epsilon * np.eye(4)
-    c = J.T @ np.linalg.inv(W) @ J
-    return float(c[0][0])
 
 
 def grad_descent(
@@ -136,26 +88,6 @@ def grad_descent(
     return states
 
 
-def cost_contours(measurement: tuple, variances: np.ndarray) -> np.ndarray:
-    """
-    Visualize the cost function gradient.
-
-    :param measurement: measurement from sensor
-    :param variances: measurement noise
-    :return: a 2D array representing the cost function at each point
-    """
-    x = np.linspace(0, SIMULATION_DIMENSIONS[0], NUM_COST_CONTOURS)
-    y = np.linspace(0, SIMULATION_DIMENSIONS[1], NUM_COST_CONTOURS)
-
-    cost = np.zeros((np.shape(x)[0], np.shape(y)[0]))
-    for i in range(np.shape(x)[0]):
-        for j in range(np.shape(y)[0]):
-            cost[j, i] = cost_fxn(
-                float(x[i]), float(y[j]), measurement, variances
-            )
-    return cost
-
-
 def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
     """
     Predict the next state given the state and control input.
@@ -194,16 +126,8 @@ def run_simulation(
 
     num_inputs = np.shape(control_inputs)[0]
 
-    variances_array = np.array(
-        [
-            [
-                pressure_variance,
-                time_of_flight_variance,
-                control_variance,
-                control_variance,
-            ]
-        ]
-    )
+    variances_array = np.array(variances)
+    variances_array = np.reshape(variances_array, (1, 4))
 
     pressure_sensor = PressureSensor(noise_variance=pressure_variance)
 
@@ -241,18 +165,10 @@ def run_simulation(
         sx, sy = zip(*sol)
         prev_pred.append((sx[-1], sy[-1]))
 
-        # plot measurements
-        h = pressure_sensor.pressure2height(pressure=measurements[0])
-
         # calculate cost function contour
-        if show_simulation:
-            j = cost_contours(
-                measurement=measurements, variances=variances_array
-            )
+        if show_simulation:  # pragma: no cover
             plot_simulation(
                 state,
-                h,
-                j,
                 sx,
                 sy,
                 prev,
@@ -260,6 +176,7 @@ def run_simulation(
                 control_inputs,
                 measurements,
                 i,
+                variances_array,
             )
     return prev, prev_pred
 
