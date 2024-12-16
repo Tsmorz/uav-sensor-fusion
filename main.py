@@ -12,6 +12,7 @@ from definitions import (
     EPSILON,
     LEARNING_RATE,
     NUM_INPUTS,
+    WIND_SPEED_VAR,
     WIND_SPEED_X_AXIS,
 )
 from src.ground_model_utils import ground
@@ -106,6 +107,7 @@ def run_simulation(
     control_inputs: np.ndarray,
     variances: tuple = DEFAULT_VARIANCES,
     show_simulation: bool = True,
+    wind_speed_x: float = WIND_SPEED_X_AXIS,
 ) -> tuple[list, list]:
     """
     Run the simulation for a given initial state and all control inputs.
@@ -114,6 +116,7 @@ def run_simulation(
     :param control_inputs: control inputs for all time steps
     :param variances: vector of measurement and state variances
     :param show_simulation: whether to plot the simulation
+    :param wind_speed_x: wind speed along the x-axis
     :return: list of ground truths and list of estimated states
     """
     # create environment
@@ -139,7 +142,9 @@ def run_simulation(
         state += u + np.random.normal(
             0, scale=control_variance, size=(num_inputs, 1)
         )
-        state[0, 0] += WIND_SPEED_X_AXIS  # + np.random.normal(WIND_SPEED_VAR)
+        state[0, 0] += wind_speed_x + np.random.normal(
+            loc=0, scale=WIND_SPEED_VAR
+        )
 
         # measurements
         pressure = pressure_sensor.height2pressure(height=float(state[1, 0]))

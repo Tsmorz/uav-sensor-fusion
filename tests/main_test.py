@@ -17,6 +17,7 @@ def test_run_simulation():
         initial_state=(0.0, 0.0),
         control_inputs=np.zeros((NUM_INPUTS, num_steps)),
         variances=variances,
+        wind_speed_x=0.0,
         show_simulation=False,
     )
 
