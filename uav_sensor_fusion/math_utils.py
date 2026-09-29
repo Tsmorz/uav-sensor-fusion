@@ -4,8 +4,7 @@ import numpy as np
 
 
 def skew(vector: np.ndarray) -> np.ndarray:
-    """
-    Calculate the skew symmetric matrix from a given vector.
+    """Calculate the skew symmetric matrix from a given vector.
 
     :param vector: A 3D vector represented as a numpy array.
     :return: The skew symmetric matrix of the given vector.
@@ -27,8 +26,7 @@ def skew(vector: np.ndarray) -> np.ndarray:
 
 
 def matrix_exponential(matrix: np.ndarray, t: float = 1.0) -> np.ndarray:
-    """
-    Calculate the matrix exponential of a given matrix.
+    """Calculate the matrix exponential of a given matrix.
 
     :param matrix: A square matrix represented as a numpy array.
     :param t: The time parameter.

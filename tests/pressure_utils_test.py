@@ -1,7 +1,7 @@
 """public doc string."""
 
-from definitions import PRESSURE_SEA_LEVEL, SEA_LEVEL_METERS
-from src.pressure_utils import PressureSensor
+from uav_sensor_fusion.definitions import PRESSURE_SEA_LEVEL, SEA_LEVEL_METERS
+from uav_sensor_fusion.pressure_utils import PressureSensor
 
 
 def test_pressure_sensor_h2p():

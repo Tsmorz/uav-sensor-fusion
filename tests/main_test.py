@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from definitions import NUM_INPUTS
-from main import run_simulation
+from uav_sensor_fusion.definitions import NUM_INPUTS
+from uav_sensor_fusion.simulation import run_simulation
 
 
 def test_run_simulation():

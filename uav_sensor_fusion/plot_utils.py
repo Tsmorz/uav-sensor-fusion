@@ -3,14 +3,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from definitions import (
+from uav_sensor_fusion.definitions import (
     FIG_SIZE,
     NUM_COST_CONTOURS,
     NUM_STATES,
     SIMULATION_DIMENSIONS,
 )
-from src.ground_model_utils import ground
-from src.pressure_utils import PressureSensor
+from uav_sensor_fusion.ground_model_utils import ground
+from uav_sensor_fusion.pressure_utils import PressureSensor
 
 
 def plot_state_error(
@@ -19,8 +19,7 @@ def plot_state_error(
     diffyLS: np.ndarray,
     diffy: np.ndarray,
 ) -> None:
-    """
-    Plot the state error after the simulation is complete.
+    """Plot the state error after the simulation is complete.
 
     :param diffxLS: x position error without measurements
     :param diffx: x position error with measurements
@@ -44,14 +43,11 @@ def plot_state_error(
     plt.grid(True)
     plt.show()
 
-    return
-
 
 def plot_simulation(
     state, sx, sy, prev, prev_pred, controls, measurements, i, variances_array
 ) -> None:
-    """
-    Plot the simulation visualization after each step.
+    """Plot the simulation visualization after each step.
 
     :param state: current state
     :param sx: x-axis values for gradient descent
@@ -88,8 +84,8 @@ def plot_simulation(
     plt.plot(sx, sy, "r--")
 
     # ground truth
-    prev_x, prev_y = zip(*prev)
-    prev_x_pred, prev_y_pred = zip(*prev_pred)
+    prev_x, prev_y = zip(*prev, strict=False)
+    prev_x_pred, prev_y_pred = zip(*prev_pred, strict=False)
 
     plt.plot(
         prev_x[0] + sum(controls[0, 0:i]),
@@ -116,18 +112,15 @@ def plot_simulation(
     plt.xlabel("x-axis (m)")
     plt.ylabel("y-axis (m)")
     plt.title("Nonlinear Least Squares Drone Localization")
-    plt.xlim([0, 100])
-    plt.ylim([0, 40])
+    plt.xlim(0, 100)
+    plt.ylim(0, 40)
 
     plt.show()
     plt.close()
 
-    return
-
 
 def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
-    """
-    Create a cost function to minimize the state uncertainty.
+    """Create a cost function to minimize the state uncertainty.
 
     :param x: current distance
     :param y: current height
@@ -149,8 +142,7 @@ def cost_fxn(x: float, y: float, measurement: tuple, var: np.ndarray) -> float:
 
 
 def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
-    """
-    Find the state estimate given the state and previous state.
+    """Find the state estimate given the state and previous state.
 
     :param state: current state
     :param x_old: previous state
@@ -175,8 +167,7 @@ def fx(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
 
 
 def cost_contours(measurement: tuple, variances: np.ndarray) -> np.ndarray:
-    """
-    Visualize the cost function gradient.
+    """Visualize the cost function gradient.
 
     :param measurement: measurement from sensor
     :param variances: measurement noise
@@ -188,7 +179,5 @@ def cost_contours(measurement: tuple, variances: np.ndarray) -> np.ndarray:
     cost = np.zeros((np.shape(x)[0], np.shape(y)[0]))
     for i in range(np.shape(x)[0]):
         for j in range(np.shape(y)[0]):
-            cost[j, i] = cost_fxn(
-                float(x[i]), float(y[j]), measurement, variances
-            )
+            cost[j, i] = cost_fxn(float(x[i]), float(y[j]), measurement, variances)
     return cost

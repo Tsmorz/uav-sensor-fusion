@@ -1,10 +1,8 @@
 """public doc string."""
 
-from typing import Optional
-
 import numpy as np
 
-from src.math_utils import matrix_exponential
+from uav_sensor_fusion.math_utils import matrix_exponential
 
 
 class StateSpace:
@@ -14,33 +12,30 @@ class StateSpace:
         self,
         A: np.ndarray,
         B: np.ndarray,
-        C: Optional[np.ndarray] = None,
-        D: Optional[np.ndarray] = None,
+        C: np.ndarray | None = None,
+        D: np.ndarray | None = None,
     ):
-        """
-        Initialize a state space model.
+        """Initialize a state space model.
 
         :param A: State transition matrix (n x n)
         :param B: Input matrix (n x m)
         :param C: Output matrix (p x n)
         :param D: Feedforward matrix (p x m)
         """
+        if C is None:
+            C = np.eye(A.shape[0])  # full state feedback
+        if D is None:
+            D = np.zeros((A.shape[0], B.shape[1]))
+
         self.A = A
         self.B = B
-
-        if C is None:
-            C = np.eye(A.shape[0])
-        if D is None:
-            D = np.zeros((C.shape[0], B.shape[1]))
         self.C = C
         self.D = D
-        pass
 
     def predict(
-        self, state: np.ndarray, control: Optional[np.ndarray] = None
+        self, state: np.ndarray, control: np.ndarray | None = None
     ) -> np.ndarray:
-        """
-        Predict the next state with the given control input.
+        """Predict the next state with the given control input.
 
         :param state: current state
         :param control: control input
@@ -52,8 +47,7 @@ class StateSpace:
         return self.A @ state + self.B @ control
 
     def cont2disc(self, dt) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Discretize the state space model using the given time step.
+        """Discretize the state space model using the given time step.
 
         :param dt: time step in seconds
         :return: discrete state transition and input matrices

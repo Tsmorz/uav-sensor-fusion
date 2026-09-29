@@ -1,7 +1,9 @@
+"""public doc string."""
+
 import numpy as np
 import pytest
 
-from src.state_space import StateSpace
+from uav_sensor_fusion.state_space import StateSpace
 
 
 def test_state_space():
@@ -9,16 +11,20 @@ def test_state_space():
     # Arrange
     expected_state_space_a = np.eye(2)
     expected_state_space_b = np.eye(2)
+    expected_state_space_c = np.eye(2)
+    expected_state_space_d = np.zeros((2, 2))
 
     A = np.eye(2)
     B = np.eye(2)
 
     # Act
-    state_space = StateSpace(A, B)
+    state_space = StateSpace(A=A, B=B, C=None, D=None)
 
     # Assert
     np.testing.assert_array_equal(state_space.A, expected_state_space_a)
     np.testing.assert_array_equal(state_space.B, expected_state_space_b)
+    np.testing.assert_array_equal(state_space.C, expected_state_space_c)
+    np.testing.assert_array_equal(state_space.D, expected_state_space_d)
 
 
 def test_state_space_predict():

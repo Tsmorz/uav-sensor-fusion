@@ -3,12 +3,10 @@
 import numpy as np
 import pytest
 
-from src.math_utils import matrix_exponential, skew
+from uav_sensor_fusion.math_utils import matrix_exponential, skew
 
 
-@pytest.mark.parametrize(
-    "vector", [np.array([1, 2, 3]), np.array([[1], [2], [3]])]
-)
+@pytest.mark.parametrize("vector", [np.array([1, 2, 3]), np.array([[1], [2], [3]])])
 def test_skew(vector):
     """Test the skew symmetric function."""
     # Arrange

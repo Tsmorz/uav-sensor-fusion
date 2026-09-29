@@ -1,12 +1,11 @@
 """public doc string."""
 
-import argparse
 import copy
 
 import numpy as np
 from loguru import logger
 
-from definitions import (
+from uav_sensor_fusion.definitions import (
     DAMPING_FACTOR,
     DEFAULT_VARIANCES,
     EPSILON,
@@ -15,18 +14,17 @@ from definitions import (
     WIND_SPEED_VAR,
     WIND_SPEED_X_AXIS,
 )
-from src.ground_model_utils import ground
-from src.plot_utils import (
+from uav_sensor_fusion.ground_model_utils import ground
+from uav_sensor_fusion.plot_utils import (
     fx,
     plot_simulation,
     plot_state_error,
 )
-from src.pressure_utils import PressureSensor
+from uav_sensor_fusion.pressure_utils import PressureSensor
 
 
 def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
-    """
-    Find the partial derivatives of the given state.
+    """Find the partial derivatives of the given state.
 
     :param state: current state
     :param x_old: previous state
@@ -35,23 +33,20 @@ def partial_f(state: np.ndarray, x_old: np.ndarray) -> np.ndarray:
     x, y = state[0], state[1]
     dx, dy = EPSILON, EPSILON
 
-    df_dx1 = (
-        fx(np.array([x + dx, y]), x_old) - fx(np.array([x - dx, y]), x_old)
-    ) / (2 * dx)
-    df_dx2 = (
-        fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y - dy]), x_old)
-    ) / (2 * dy)
+    df_dx1 = (fx(np.array([x + dx, y]), x_old) - fx(np.array([x - dx, y]), x_old)) / (
+        2 * dx
+    )
+    df_dx2 = (fx(np.array([x, y + dy]), x_old) - fx(np.array([x, y - dy]), x_old)) / (
+        2 * dy
+    )
 
     df = np.hstack((df_dx1, df_dx2))
 
     return df
 
 
-def grad_descent(
-    state: tuple, measurement: tuple, variances: np.ndarray
-) -> list:
-    """
-    Perform gradient descent on the cost function.
+def grad_descent(state: tuple, measurement: tuple, variances: np.ndarray) -> list:
+    """Perform gradient descent on the cost function.
 
     :param state: current state
     :param measurement: measurement
@@ -64,9 +59,7 @@ def grad_descent(
 
     X = np.array([[x], [y]])
 
-    b = np.array(
-        [[pressure], [time_of_flight], [control[0, 0]], [control[1, 0]]]
-    )
+    b = np.array([[pressure], [time_of_flight], [control[0, 0]], [control[1, 0]]])
 
     states = [(x, y)]
     num_steps = 10000
@@ -90,8 +83,7 @@ def grad_descent(
 
 
 def prediction(state: np.ndarray, u: np.ndarray) -> np.ndarray:
-    """
-    Predict the next state given the state and control input.
+    """Predict the next state given the state and control input.
 
     :param state: current state
     :param u: control input
@@ -109,8 +101,7 @@ def run_simulation(
     show_simulation: bool = True,
     wind_speed_x: float = WIND_SPEED_X_AXIS,
 ) -> tuple[list, list]:
-    """
-    Run the simulation for a given initial state and all control inputs.
+    """Run the simulation for a given initial state and all control inputs.
 
     :param initial_state: initial state
     :param control_inputs: control inputs for all time steps
@@ -139,12 +130,8 @@ def run_simulation(
         # predictions and control commands
         guess = prediction(state, control_inputs[:, i])
         u = np.reshape(control_inputs[:, i], (num_inputs, 1))
-        state += u + np.random.normal(
-            0, scale=control_variance, size=(num_inputs, 1)
-        )
-        state[0, 0] += wind_speed_x + np.random.normal(
-            loc=0, scale=WIND_SPEED_VAR
-        )
+        state += u + np.random.normal(0, scale=control_variance, size=(num_inputs, 1))
+        state[0, 0] += wind_speed_x + np.random.normal(loc=0, scale=WIND_SPEED_VAR)
 
         # measurements
         pressure = pressure_sensor.height2pressure(height=float(state[1, 0]))
@@ -167,7 +154,7 @@ def run_simulation(
             measurements,
             variances_array,
         )
-        sx, sy = zip(*sol)
+        sx, sy = zip(*sol, strict=False)
         prev_pred.append((sx[-1], sy[-1]))
 
         # calculate cost function contour
@@ -187,8 +174,7 @@ def run_simulation(
 
 
 def main(show_sim: bool) -> None:
-    """
-    Run the main function.
+    """Run the main function.
 
     :param show_sim: whether to show the simulation
     """
@@ -211,8 +197,8 @@ def main(show_sim: bool) -> None:
     )
 
     # ground truth
-    prev_x, prev_y = zip(*prev)
-    prev_x_pred, prev_y_pred = zip(*prev_pred)
+    prev_x, prev_y = zip(*prev, strict=False)
+    prev_x_pred, prev_y_pred = zip(*prev_pred, strict=False)
 
     diffxLS = np.array(prev_x) - np.array(prev_x_pred)
     diffx = np.array(prev_x) - prev_x[0] - np.cumsum(controls_xy[0, :])
@@ -232,14 +218,3 @@ def main(show_sim: bool) -> None:
         f"\t X: {np.std(diffxLS):.2f}\n"
         f"\t Y: {np.std(diffyLS):.2f}"
     )
-
-    return
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Simulation inputs")
-    parser.add_argument("--hide", action="store_true")
-
-    args = parser.parse_args()
-
-    main(show_sim=not args.hide)
