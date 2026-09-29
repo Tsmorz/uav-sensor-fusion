@@ -146,23 +146,49 @@ class SimulationVisualizer:
         ax.clear()
 
         # --- cost field (sequential magnitude) -----------------------------
+        # Log-spaced levels so the layers spread evenly across the decades of
+        # cost instead of collapsing the low-cost basin into one flat band.
         cost = cost_contours(measurement=measurements, variances=variances_array)
         floor = max(float(cost[cost > 0].min()) if np.any(cost > 0) else 1e-6, 1e-6)
-        norm = LogNorm(vmin=floor, vmax=float(cost.max()))
+        top = max(float(cost.max()), floor * 10.0)
+        # Snap the scale to whole decades so the colorbar ticks read cleanly.
+        lo = 10.0 ** np.floor(np.log10(floor))
+        hi = 10.0 ** np.ceil(np.log10(top))
+        norm = LogNorm(vmin=lo, vmax=hi)
+        levels = np.logspace(np.log10(lo), np.log10(hi), num=48)
+        clipped = np.clip(cost, lo, hi)
         field = ax.contourf(
             self._grid_x,
             self._grid_y,
-            np.clip(cost, floor, None),
-            levels=30,
+            clipped,
+            levels=levels,
             cmap="Blues",
             norm=norm,
             zorder=0,
+        )
+        # Faint contour lines give the field a layered, topographic read.
+        ax.contour(
+            self._grid_x,
+            self._grid_y,
+            clipped,
+            levels=levels[::6],
+            colors="white",
+            linewidths=0.4,
+            alpha=0.5,
+            norm=norm,
+            zorder=1,
         )
         if self._cbar is None:
             self._cbar = self.fig.colorbar(field, ax=ax, pad=0.02)
             self._cbar.set_label("localization cost (log scale)")
         else:
             self._cbar.update_normal(field)
+        # Show whole-decade ticks only (contourf otherwise adds odd boundaries).
+        decades = (10.0 ** np.arange(np.log10(lo), np.log10(hi) + 1)).tolist()
+        self._cbar.set_ticks(decades)
+        self._cbar.ax.set_yticklabels(
+            [f"$10^{{{int(round(np.log10(t)))}}}$" for t in decades]
+        )
 
         # --- known terrain -------------------------------------------------
         ax.fill_between(
