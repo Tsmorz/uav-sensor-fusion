@@ -16,8 +16,8 @@ from uav_sensor_fusion.definitions import (
 )
 from uav_sensor_fusion.ground_model_utils import ground
 from uav_sensor_fusion.plot_utils import (
+    SimulationVisualizer,
     fx,
-    plot_simulation,
     plot_state_error,
 )
 from uav_sensor_fusion.pressure_utils import PressureSensor
@@ -100,6 +100,7 @@ def run_simulation(
     variances: tuple = DEFAULT_VARIANCES,
     show_simulation: bool = True,
     wind_speed_x: float = WIND_SPEED_X_AXIS,
+    save_path: str | None = None,
 ) -> tuple[list, list]:
     """Run the simulation for a given initial state and all control inputs.
 
@@ -108,6 +109,7 @@ def run_simulation(
     :param variances: vector of measurement and state variances
     :param show_simulation: whether to plot the simulation
     :param wind_speed_x: wind speed along the x-axis
+    :param save_path: optionally record the animation to this file (.gif/.mp4)
     :return: list of ground truths and list of estimated states
     """
     # create environment
@@ -124,6 +126,12 @@ def run_simulation(
     variances_array = np.reshape(variances_array, (1, 4))
 
     pressure_sensor = PressureSensor(noise_variance=pressure_variance)
+
+    visualizer = (
+        SimulationVisualizer(live=show_simulation, save_path=save_path)
+        if show_simulation or save_path is not None
+        else None
+    )
 
     # find cost contours every step
     for i in range(max_time_steps - 1):
@@ -147,7 +155,7 @@ def run_simulation(
         prev.append((state[0, 0], state[1, 0]))
 
         # store prediction
-        offset = 10.0 if show_simulation else 0.0
+        offset = 10.0 if visualizer is not None else 0.0
 
         sol = grad_descent(
             (guess[0, 0] - offset, guess[1, 0] + offset),
@@ -157,9 +165,9 @@ def run_simulation(
         sx, sy = zip(*sol, strict=False)
         prev_pred.append((sx[-1], sy[-1]))
 
-        # calculate cost function contour
-        if show_simulation:  # pragma: no cover
-            plot_simulation(
+        # redraw the live visualization for this step
+        if visualizer is not None:  # pragma: no cover
+            visualizer.update(
                 state,
                 sx,
                 sy,
@@ -170,13 +178,18 @@ def run_simulation(
                 i,
                 variances_array,
             )
+
+    if visualizer is not None:  # pragma: no cover
+        visualizer.close()
+
     return prev, prev_pred
 
 
-def main(show_sim: bool) -> None:
+def main(show_sim: bool, save_path: str | None = None) -> None:
     """Run the main function.
 
     :param show_sim: whether to show the simulation
+    :param save_path: optionally record the animation to this file (.gif/.mp4)
     """
     # initial state
     init_x, init_y = 5.0, 10.0
@@ -194,6 +207,7 @@ def main(show_sim: bool) -> None:
         initial_state=(init_x, init_y),
         control_inputs=controls_xy,
         show_simulation=show_sim,
+        save_path=save_path,
     )
 
     # ground truth
